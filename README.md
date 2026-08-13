@@ -4,13 +4,32 @@
 
 这是一个在浏览器里运行的体素沙盒：Vite + Three.js，程序生成像素贴图，**不含任何 Mojang / Microsoft 官方资源包、音效或代码**。不是官方产品，也与 Mojang 无关。
 
-本地运行：
+---
+
+## 本地启动
+
+需要已安装 [Node.js](https://nodejs.org/)（建议 18 或以上）和 npm。
 
 ```bash
+git clone https://github.com/FoyonaCZY/mc-grok.git
+cd mc-grok
 npm install
-npm run dev      # 本地开发
-npm run build    # 产出 dist
-npm run preview  # 预览构建结果
+npm run dev
+```
+
+终端里会出现本地地址，默认是：
+
+```
+http://127.0.0.1:5173/
+```
+
+用浏览器打开即可。第一次进游戏要点一下画面：会请求全屏和鼠标锁定。
+
+其它命令：
+
+```bash
+npm run build      # 打包到 dist/
+npm run preview    # 预览打包结果
 ```
 
 存档在当前浏览器的 `localStorage`，不上传服务器。换设备、清站点数据会丢档。
