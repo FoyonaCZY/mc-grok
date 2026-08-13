@@ -2,7 +2,7 @@
 
 **English** | [中文](README.zh-CN.md)
 
-**A 100% Grok 4.6–written, pure-frontend Minecraft recreation.**
+**A 100% Grok 4.6–written, pure-frontend Minecraft recreation.** (Minecrafts 1.22)
 
 A voxel sandbox that runs in the browser: Vite + Three.js, procedurally painted pixel textures, **no Mojang / Microsoft assets, sounds, or code**. Unofficial fan project. Not affiliated with Mojang.
 
@@ -137,7 +137,7 @@ Fluids: water, lava. Sand / gravel / torches have gravity.
 
 **Materials:** stick, coal/charcoal, ingots, gems, redstone, clay ball, brick, flint, string, bone/bone meal, feather, leather, paper, book, bowl, gunpowder, dyes, nether quartz/brick, blaze rod/powder, ghast tear, magma cream, gold nugget, ender pearl, eye of ender, wheat/seeds, and more.
 
-**Combat:** bow, arrows.
+**Combat:** bow, arrows, shield (right-click block), Totem of Undying (hotbar / offhand). Tools and armor have durability bars.
 
 ---
 
@@ -180,7 +180,12 @@ Kills drop XP orbs. Melee has knockback. The player is knocked back slightly whe
 - Eyes of Ender: blaze powder + ender pearl; throw toward the nearest stronghold; right-click empty frames; 12 eyes light the End portal
 - Ender Dragon: break crystals, then the dragon; exit portal + dragon egg at the center; stand on the exit ~3s to return to the Overworld spawn; dying in the End/Nether also returns to the Overworld
 - Iron golem construction, wolf taming, fence-gate toggle
-- Compass HUD, F3-style debug, Chinese/English UI
+- Compass HUD, clock HUD, F3 debug (F3+C copies `/tp`), Chinese/English UI
+- Advancements with toast popups (pause menu → Advancements)
+- Attack cooldown, sprint FOV, water/lava/portal/fire overlays
+- Golden apple: regen + absorption; golden carrot: night vision; witch melee can poison
+- Autosave about every 40s; optional Keep Inventory in settings
+- Brightness slider; Fast graphics skips AO / extra light flood for FPS
 - Day/night, rain/snow, procedural audio (not vanilla samples)
 
 ---
@@ -198,6 +203,7 @@ Kills drop XP orbs. Melee has knockback. The player is knocked back slightly whe
 | E | Inventory |
 | Q | Drop |
 | T / Enter | Chat and commands |
+| F3 | Debug overlay; F3+C copies teleport coords |
 | F5 | Perspective |
 | Esc | Pause |
 
@@ -220,6 +226,7 @@ Prefix with `/` in chat. `/time`, `/seed`, `/help`, `/locate`, `/dim` **do not n
 /dim nether|end|overworld
 /locate village
 /locate stronghold
+/effect regen|speed|fire_resist|poison|night_vision|absorption [seconds]
 /help
 ```
 
@@ -229,7 +236,8 @@ Prefix with `/` in chat. `/time`, `/seed`, `/help`, `/locate`, `/dim` **do not n
 
 ## Technical notes
 
-- Chunks: `Uint8Array` block IDs (max 255) + simple light flood
+- Chunks: `Uint8Array` block IDs (max 255) + light flood (reduced on Fast graphics)
+- Streaming chunk generation and distance-sorted mesh rebuilds
 - Player camera: `PerspectiveCamera`, `rotation.order = "YXZ"`, pitch/yaw; do not `lookAt` the player camera
 - Save keys: `minecrafts.worlds.v1`, `minecrafts.settings.v1`
 - Per-dimension block patches (`patches` / `netherPatches` / `endPatches`)

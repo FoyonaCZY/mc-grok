@@ -15,6 +15,21 @@ import { t } from "./ui/i18n.js";
 import { itemName } from "./world/blocks.js";
 import { SMELT, canSmelt } from "./inventory/recipes.js";
 
+const ADV_MAP = {
+  "story/mine_stone": ["advStone", "advStoneDesc"],
+  "story/getting_wood": ["advWood", "advWoodDesc"],
+  "story/iron_tools": ["advIron", "advIronDesc"],
+  "story/mine_diamond": ["advDiamond", "advDiamondDesc"],
+  "nether/root": ["advNether", "advNetherDesc"],
+  "end/root": ["advEnd", "advEndDesc"],
+  "end/kill_dragon": ["advDragon", "advDragonDesc"],
+  "adventure/sleep": ["advSleep", "advSleepDesc"],
+  "husbandry/eat": ["advEat", "advEatDesc"],
+  "adventure/kill": ["advKill", "advKillDesc"],
+  "adventure/totem": ["advTotem", "advTotemDesc"],
+  "adventure/shield": ["advShield", "advShieldDesc"],
+};
+
 export class Game {
   constructor() {
     this.canvas = document.getElementById("gl");
@@ -234,6 +249,14 @@ export class Game {
     u.on("respawn", () => this.respawn());
     u.on("chat", (text) => this.handleChat(text));
     u.on("closeInv", () => this.closeInv());
+    u.on("advancements", () => {
+      u.refreshAdv(this.meta?.advancements || {});
+      u.show("adv");
+    });
+    u.on("advBack", () => {
+      u.refreshPause();
+      u.show("pause");
+    });
   }
 
   async showTitle() {
@@ -355,10 +378,9 @@ export class Game {
       this.hand = null;
     }
     if (this.camera.parent) this.camera.parent.remove(this.camera);
-    if (this.world) {
-      this.world.chunks.forEach((c) => c.disposeMesh());
-      this.world.group.parent?.remove(this.world.group);
-    }
+    this.entities?.clearAll?.();
+    this.fx?.dispose?.();
+    this.world?.dispose?.();
     this.world = null;
     this.scene = null;
     this.player = null;
@@ -500,6 +522,12 @@ export class Game {
         }
       }
       if (e.code === "F3") this.debug = !this.debug;
+      if (this.debug && e.code === "KeyC") {
+        const p = this.player.pos;
+        const text = `/tp ${p.x.toFixed(2)} ${p.y.toFixed(2)} ${p.z.toFixed(2)}`;
+        navigator.clipboard?.writeText(text).catch(() => {});
+        this.chat(this.T("copiedTp") + " " + text);
+      }
       if (e.code === "F1") {
         this.hideHud = !this.hideHud;
         const hud = this.ui.root.querySelector("#sc-hud");
@@ -512,7 +540,12 @@ export class Game {
       }
     } else if (this.invOpen && (e.code === "Escape" || e.code === "KeyE")) {
       this.closeInv();
-    } else if (this.paused && e.code === "Escape") this.resume();
+    } else if (this.paused && e.code === "Escape") {
+      if (this.ui.screen === "adv") {
+        this.ui.refreshPause();
+        this.ui.show("pause");
+      } else this.resume();
+    }
   }
 
   chat(msg) {
@@ -633,8 +666,18 @@ export class Game {
           );
         }
       } else this.chat(this.T("unknownCmd"));
+    } else if (cmd === "effect") {
+      const id = (args[0] || "").toLowerCase();
+      const ok = ["regen", "speed", "fire_resist", "poison", "night_vision", "absorption"];
+      if (!ok.includes(id)) {
+        this.chat(this.T("unknownCmd"));
+        return;
+      }
+      const sec = Math.max(1, Number(args[1]) || 12);
+      this.player.addEffect(id, sec);
+      this.chat(`${this.T("effectGive")} ${id} ${sec}s`);
     } else if (cmd === "help") {
-      this.chat("/gamemode /give /time /tp /seed /weather /summon /kill /difficulty /dim nether|end /locate village|stronghold");
+      this.chat("/gamemode /give /time /tp /seed /weather /summon /kill /difficulty /dim nether|end /locate village|stronghold /effect");
     } else this.chat(this.T("unknownCmd"));
     this.ui.renderHotbar(this.player);
   }
@@ -659,8 +702,16 @@ export class Game {
     }
     this.world.applyGravityBlocks(hit.x, hit.y + 1, hit.z);
     this.audio.break();
-    this.fx.burst(hit.x, hit.y, hit.z, 0x8a5a32, this.settings.particles === "minimal" ? 4 : 14);
+    const burstN = this.settings.particles === "minimal" ? 4 : this.settings.particles === "decreased" ? 8 : 14;
+    this.fx.burst(hit.x, hit.y, hit.z, 0x8a5a32, burstN);
     if (drop && ITEMS[drop]) this.entities.spawnItem(hit.x, hit.y, hit.z, drop, 1);
+    if (this.player.gamemode === "survival") {
+      this.player.wearHeld(1);
+      this.player.exhaust(0.005);
+      if (b.key === "stone" || b.key === "cobblestone") this.grantAdv("story/mine_stone");
+      if (b.key?.endsWith("_log")) this.grantAdv("story/getting_wood");
+      if (b.key === "diamond_ore" || drop === "diamond") this.grantAdv("story/mine_diamond");
+    }
     if (this.player.gamemode === "survival" && (b.key?.endsWith("leaves") || id === LEAVES)) {
       if (Math.random() < 0.06) this.entities.spawnItem(hit.x, hit.y, hit.z, "oak_sapling", 1);
       if (Math.random() < 0.05) this.entities.spawnItem(hit.x, hit.y, hit.z, "apple", 1);
@@ -668,11 +719,11 @@ export class Game {
     if (this.player.gamemode === "survival" && id === WHEAT_3) {
       this.entities.spawnItem(hit.x, hit.y, hit.z, "wheat_seeds", 1 + ((Math.random() * 2) | 0));
     }
-    if (this.player.gamemode === "survival") this.player.exhaust(0.005);
   }
 
   tryUse() {
     const p = this.player;
+    if (p.held()?.id === "shield") return;
     const hit = p.look;
     const dir = new THREE.Vector3();
     this.camera.getWorldDirection(dir);
@@ -812,6 +863,7 @@ export class Game {
       if (toolIt?.tool === "hoe" && (id === GRASS || id === DIRT)) {
         this.world.setBlock(hit.x, hit.y, hit.z, FARMLAND);
         this.audio.place();
+        this.player.wearHeld(1);
         return;
       }
       if (heldTool?.id === "flint_and_steel" && p.gamemode !== "adventure") {
@@ -826,6 +878,7 @@ export class Game {
         const az = hit.z + (hit.face?.[2] || 0);
         if (this.world.tryLightPortal(ax, ay, az) || this.world.tryLightPortal(hit.x, hit.y, hit.z)) {
           this.audio.place();
+          this.player.wearHeld(1);
           this.chat(this.T("portalLit"));
           return;
         }
@@ -893,6 +946,7 @@ export class Game {
     }
     if (p.eatHeld()) {
       this.audio.eat();
+      this.grantAdv("husbandry/eat");
       this.ui.renderHotbar(p);
       return;
     }
@@ -1026,10 +1080,12 @@ export class Game {
     this.player.spawn.set(hit.x + 0.5, hit.y + 1, hit.z + 0.5);
     this.world.time = 1000;
     this.world.weather = "clear";
+    this._sleepFade = 1.15;
     if (this.player.gamemode === "survival") {
       this.player.health = Math.min(20, this.player.health + 2);
       this.player.hunger = Math.min(20, this.player.hunger + 1);
     }
+    this.grantAdv("adventure/sleep");
     this.chat(this.T("slept"));
   }
 
@@ -1080,6 +1136,8 @@ export class Game {
     this.ui.show("hud");
     this.ui.renderHotbar(this.player);
     this.chat(to === "end" ? this.T("enteredEnd") : to === "nether" ? this.T("enteredNether") : this.T("enteredOverworld"));
+    if (to === "nether") this.grantAdv("nether/root");
+    if (to === "end") this.grantAdv("end/root");
     this.input.requestLock();
     this.save();
   }
@@ -1241,8 +1299,14 @@ export class Game {
           this.audio.splash();
         }
       } else this._rainAcc = 0;
-      this.world.updateChunks(this.player.pos.x, this.player.pos.z, this.settings.renderDistance);
-      this.world.processMeshQueue(this.settings.graphics === "fast" ? 1 : 2);
+      this.world.fastGfx = this.settings.graphics === "fast";
+      const fps = this.fps || 60;
+      const genB = fps > 48 ? 3 : fps > 32 ? 2 : 1;
+      const meshB = this.settings.graphics === "fast"
+        ? (fps > 40 ? 2 : 1)
+        : (fps > 50 ? 4 : fps > 35 ? 2 : 1);
+      this.world.updateChunks(this.player.pos.x, this.player.pos.z, this.settings.renderDistance, genB);
+      this.world.processMeshQueue(meshB, this.player.pos.x, this.player.pos.z);
       if (this.world.pendingMobs?.length) {
         const keep = [];
         const seen = new Set(this.entities.list.map((e) => e.spawnKey).filter(Boolean));
@@ -1274,14 +1338,21 @@ export class Game {
 
       const left = this.input.mouse.left;
       const right = this.input.mouse.right;
+      this.player.blocking = right && this.player.hasShield();
       if (left && !this.wasLeft) {
         const dir = new THREE.Vector3();
         this.camera.getWorldDirection(dir);
-        const dmg = ITEMS[this.player.held()?.id]?.damage || 1;
-        if (this.entities.hitMobs(this.camera.position, dir, 4, dmg)) this.audio.hit();
+        let dmg = (ITEMS[this.player.held()?.id]?.damage || 1) * this.player.attackMul();
+        if (!this.player.onGround && this.player.vel.y < 0) dmg *= 1.5;
+        if (this.entities.hitMobs(this.camera.position, dir, 4, dmg)) {
+          this.audio.hit();
+          this.grantAdv("adventure/kill");
+          this.player.wearHeld(1);
+        }
+        this.player.attackCool = 0;
         this.handSwing = 1;
       }
-      if (right && !this.wasRight) this.tryUse();
+      if (right && !this.wasRight && !this.player.blocking) this.tryUse();
       this.wasLeft = left;
       this.wasRight = right;
 
@@ -1299,6 +1370,7 @@ export class Game {
       if (this.world.dragonDead && this.meta && !this.meta.endDragonDead) {
         this.meta.endDragonDead = true;
         this.chat(this.T("dragonDefeated"));
+        this.grantAdv("end/kill_dragon");
       }
       const dragon = this.entities.list.find((e) => e.type === "ender_dragon");
       this.ui.setBossBar(dragon ? dragon.hp / 200 : 0, this.T("enderDragon"));
@@ -1329,6 +1401,25 @@ export class Game {
         this._growAcc = 0;
         this.world.tickGrowth(this.player.pos);
       }
+      this._saveAcc = (this._saveAcc || 0) + dt;
+      if (this._saveAcc > 42) {
+        this._saveAcc = 0;
+        this.save();
+        this.ui.flashSave();
+      }
+      if (this.player.held()?.id === "iron_pickaxe" || this.player.inv.some((s) => s?.id === "iron_pickaxe")) {
+        this.grantAdv("story/iron_tools");
+      }
+      if (this.player._blockedHit) {
+        this.player._blockedHit = false;
+        this.grantAdv("adventure/shield");
+      }
+      if (this.player._totemUsed) {
+        this.player._totemUsed = false;
+        this.grantAdv("adventure/totem");
+        this.fx.burstAt(this.player.pos.x, this.player.pos.y + 1, this.player.pos.z, 0xffee55, 22);
+        this.audio.pop();
+      }
       if (this.player.look) this.hl.show(this.player.look.x, this.player.look.y, this.player.look.z);
       else this.hl.hide();
       if (this.player.breakTarget) {
@@ -1342,7 +1433,7 @@ export class Game {
 
       if (this.player.dead) {
         this.input.exitLock();
-        if (this.player.gamemode === "survival") {
+        if (this.player.gamemode === "survival" && !this.settings.keepInventory) {
           [...this.player.hotbar, ...this.player.inv].forEach((s) => {
             if (s) this.entities.spawnItem(this.player.pos.x, this.player.pos.y + 1, this.player.pos.z, s.id, s.count);
           });
@@ -1367,6 +1458,8 @@ export class Game {
       this.world.dim === "nether",
       dt,
       this.world.dim === "end",
+      this.settings.brightness ?? 50,
+      !!this.player.effects?.night_vision,
     );
     const fogNear = this.settings.renderDistance * 16;
     if (this.scene.fog) {
@@ -1383,6 +1476,20 @@ export class Game {
 
     this.ui.tickHud(dt, this.player);
     this.ui.renderHotbar(this.player);
+    this.ui.setAttack(this.player.attackCool);
+    this.ui.setClockLabel(timeOfDayLabel(this.world.time));
+    const eyeId = this.world.getBlock(this.player.pos.x, this.player.pos.y + this.player.eyeHeight(), this.player.pos.z);
+    this.ui.setOverlay("fx-water", eyeId === WATER);
+    this.ui.setOverlay("fx-lava", !!this.player.inLava);
+    this.ui.setOverlay("fx-fire", this.player.fireTicks > 0 && !this.player.inLava);
+    this.ui.setOverlay("fx-hurt", this.player.hurtYaw > 0.35, Math.min(1, this.player.hurtYaw));
+    this.ui.setOverlay("fx-portal", (this._portalTime || 0) > 0.15, Math.min(1, (this._portalTime || 0) / 3));
+    this.ui.setOverlay("fx-totem", (this.player._totemFlash || 0) > 0, Math.min(1, this.player._totemFlash || 0));
+    if (this._sleepFade > 0) {
+      this._sleepFade -= dt * 1.35;
+      this.ui.setOverlay("fx-sleep", true, Math.min(1, this._sleepFade));
+    } else this.ui.setOverlay("fx-sleep", false);
+
     if (this.debug) {
       const p = this.player.renderPos || this.player.pos;
       const look = this.player.look;
@@ -1397,7 +1504,7 @@ export class Game {
           ? "the_end"
           : (BIOME_NAMES[biomeId] || biomeId);
       this.ui.setDebug(
-        `Minecrafts 1.21.8 (web)\n${this.fps | 0} fps  (60hz interp)\n` +
+        `Minecrafts 1.22 (web)\n${this.fps | 0} fps  (60hz interp)\n` +
           `XYZ: ${p.x.toFixed(3)} / ${p.y.toFixed(5)} / ${p.z.toFixed(3)}\n` +
           `Block: ${p.x | 0} ${p.y | 0} ${p.z | 0}\n` +
           `Chunk: ${Math.floor(p.x / 16)} ${Math.floor(p.z / 16)}\n` +
@@ -1406,16 +1513,34 @@ export class Game {
         `${this.T("seedIs")} ${this.meta.seed}\n${timeOfDayLabel(this.world.time)}\n` +
           `Game: ${this.player.gamemode} ${this.meta.difficulty}\n` +
           `Dim: ${this.world.dim}\n` +
-          `Rendered: ${this.world.chunks.size} chunks\nBiome: ${biome}\n` +
+          `Rendered: ${this.world.chunks.size} chunks  Q: ${this.world.meshQueue.length}\n` +
+          `E: ${this.entities?.list.length || 0}  Biome: ${biome}\n` +
           `Weather: ${this.world.weather}\n` +
+          `FX: ${Object.keys(this.player.effects || {}).join(",") || "-"}\n` +
           `Flying: ${this.player.flying}  OnGround: ${this.player.onGround}`,
         true,
       );
     } else this.ui.setDebug("", "", false);
 
-    const sprintFov = this.player.sprinting && playing ? 6 : 0;
-    this.camera.fov = this.settings.fov + sprintFov;
-    this.camera.updateProjectionMatrix();
+    const far = Math.max(180, this.settings.renderDistance * 16 * 2.15);
+    this._fovShow = this._fovShow ?? this.settings.fov;
+    const wantFov = (this.settings.fov || 70) + (this.player.sprinting && playing ? 8 : 0);
+    this._fovShow += (wantFov - this._fovShow) * Math.min(1, dt * 7);
+    if (Math.abs(this.camera.fov - this._fovShow) > 0.04 || Math.abs(this.camera.far - far) > 1) {
+      this.camera.fov = this._fovShow;
+      this.camera.far = far;
+      this.camera.updateProjectionMatrix();
+    }
     this.renderer.render(this.scene, this.camera);
   };
+
+  grantAdv(id) {
+    if (!this.meta) return;
+    this.meta.advancements = this.meta.advancements || {};
+    if (this.meta.advancements[id]) return;
+    this.meta.advancements[id] = Date.now();
+    const pair = ADV_MAP[id];
+    if (pair) this.ui.toastAdv(this.T(pair[0]), this.T(pair[1]));
+    this.audio.pop();
+  }
 }

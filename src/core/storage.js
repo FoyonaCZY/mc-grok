@@ -17,10 +17,12 @@ export function loadSettings() {
       clouds: true,
       particles: "all",
       autoJump: false,
+      brightness: 50,
+      keepInventory: false,
       ...JSON.parse(localStorage.getItem(SETTINGS) || "{}"),
     };
   } catch {
-    return { lang: "zh_cn", fov: 70, sensitivity: 50, renderDistance: 6, music: 40, sound: 80, invertMouse: false, viewBobbing: true, graphics: "fancy", guiScale: 0, clouds: true, particles: "all", autoJump: false };
+    return { lang: "zh_cn", fov: 70, sensitivity: 50, renderDistance: 6, music: 40, sound: 80, invertMouse: false, viewBobbing: true, graphics: "fancy", guiScale: 0, clouds: true, particles: "all", autoJump: false, brightness: 50, keepInventory: false };
   }
 }
 

@@ -1814,6 +1814,8 @@ const LOOT = {
     { id: "golden_apple", n: [1, 1], p: 0.06 },
     { id: "diamond", n: [1, 1], p: 0.07 },
     { id: "iron_sword", n: [1, 1], p: 0.1 },
+    { id: "totem_of_undying", n: [1, 1], p: 0.04 },
+    { id: "shield", n: [1, 1], p: 0.08 },
   ],
   mineshaft: [
     { id: "oak_planks", n: [4, 16], p: 0.7 },
@@ -1846,6 +1848,7 @@ const LOOT = {
     { id: "gold_ingot", n: [1, 3], p: 0.3 },
     { id: "emerald", n: [1, 2], p: 0.22 },
     { id: "lava_bucket", n: [1, 1], p: 0.12 },
+    { id: "shield", n: [1, 1], p: 0.22 },
   ],
   shipwreck: [
     { id: "oak_planks", n: [4, 16], p: 0.8 },
@@ -1888,5 +1891,6 @@ const LOOT = {
     { id: "book", n: [1, 3], p: 0.4 },
     { id: "gold_ingot", n: [1, 3], p: 0.28 },
     { id: "iron_sword", n: [1, 1], p: 0.12 },
+    { id: "totem_of_undying", n: [1, 1], p: 0.07 },
   ],
 };

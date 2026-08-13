@@ -28,6 +28,7 @@ export class World {
     this._lastChunkKey = "";
     this.chestLoot = new Map();
     this.pendingMobs = [];
+    this.fastGfx = false;
 
     const atlasTex = new THREE.CanvasTexture(textures.atlas);
     atlasTex.magFilter = THREE.NearestFilter;
@@ -96,8 +97,14 @@ export class World {
     }
     this.chunks.set(k, c);
     this.group.add(c.group);
-    this.meshQueue.push(c);
+    this.enqueueMesh(c);
     return c;
+  }
+
+  enqueueMesh(c) {
+    if (!c) return;
+    c.dirty = true;
+    this.meshQueue.push(c);
   }
 
   getBlock(x, y, z) {
@@ -144,11 +151,7 @@ export class World {
   }
 
   markDirty(cx, cz, lx, lz) {
-    const c = this.chunkAt(cx, cz);
-    if (c) {
-      c.dirty = true;
-      this.meshQueue.push(c);
-    }
+    this.enqueueMesh(this.chunkAt(cx, cz));
     if (lx === 0) this.dirtyChunk(cx - 1, cz);
     if (lx === SIZE - 1) this.dirtyChunk(cx + 1, cz);
     if (lz === 0) this.dirtyChunk(cx, cz - 1);
@@ -156,11 +159,7 @@ export class World {
   }
 
   dirtyChunk(cx, cz) {
-    const c = this.chunkAt(cx, cz);
-    if (c) {
-      c.dirty = true;
-      this.meshQueue.push(c);
-    }
+    this.enqueueMesh(this.chunkAt(cx, cz));
   }
 
   isSolid(x, y, z) {
@@ -178,24 +177,27 @@ export class World {
     return id === WATER || id === LAVA;
   }
 
-  updateChunks(px, pz, dist) {
+  updateChunks(px, pz, dist, genBudget = 2) {
     const pcx = Math.floor(px / SIZE);
     const pcz = Math.floor(pz / SIZE);
-    const k = `${pcx},${pcz},${dist}`;
-    if (k === this._lastChunkKey) return;
-    this._lastChunkKey = k;
-    const want = new Set();
+    const missing = [];
     for (let dz = -dist; dz <= dist; dz++) {
       for (let dx = -dist; dx <= dist; dx++) {
         if (dx * dx + dz * dz > dist * dist + 1) continue;
         const cx = pcx + dx;
         const cz = pcz + dz;
-        want.add(this.key(cx, cz));
-        this.ensureChunk(cx, cz);
+        if (!this.chunks.has(this.key(cx, cz))) missing.push([cx, cz, dx * dx + dz * dz]);
       }
     }
+    missing.sort((a, b) => a[2] - b[2]);
+    const n = Math.max(1, genBudget | 0);
+    for (let i = 0; i < missing.length && i < n; i++) this.ensureChunk(missing[i][0], missing[i][1]);
+
+    const unloadR = (dist + 1) * (dist + 1) + 2;
     for (const [k, c] of this.chunks) {
-      if (!want.has(k)) {
+      const dx = c.cx - pcx;
+      const dz = c.cz - pcz;
+      if (dx * dx + dz * dz > unloadR) {
         c.disposeMesh();
         this.group.remove(c.group);
         this.chunks.delete(k);
@@ -203,18 +205,30 @@ export class World {
     }
   }
 
-  processMeshQueue(budget = 2) {
-    let n = 0;
+  processMeshQueue(budget = 2, px = 0, pz = 0) {
     const seen = new Set();
-    const rest = [];
+    const unique = [];
     for (const c of this.meshQueue) {
       const k = this.key(c.cx, c.cz);
-      if (seen.has(k) || !this.chunks.has(k)) continue;
+      if (seen.has(k) || !this.chunks.has(k) || !c.dirty) continue;
       seen.add(k);
-      if (n < budget && c.dirty) {
-        c.buildMesh(this, this.textures, this.opaqueMat, this.cutoutMat, this.transMat);
+      unique.push(c);
+    }
+    unique.sort((a, b) => {
+      const ax = a.cx * SIZE + 8 - px;
+      const az = a.cz * SIZE + 8 - pz;
+      const bx = b.cx * SIZE + 8 - px;
+      const bz = b.cz * SIZE + 8 - pz;
+      return ax * ax + az * az - (bx * bx + bz * bz);
+    });
+    const opts = { ao: !this.fastGfx, fancyLight: !this.fastGfx };
+    let n = 0;
+    const rest = [];
+    for (const c of unique) {
+      if (n < budget) {
+        c.buildMesh(this, this.textures, this.opaqueMat, this.cutoutMat, this.transMat, opts);
         n++;
-      } else if (c.dirty) rest.push(c);
+      } else rest.push(c);
     }
     this.meshQueue = rest;
     return n;
@@ -307,21 +321,17 @@ export class World {
     const px = Math.floor(pos.x);
     const py = Math.floor(pos.y);
     const pz = Math.floor(pos.z);
-    for (let dx = -10; dx <= 10; dx++) {
-      for (let dz = -10; dz <= 10; dz++) {
-        for (let dy = -3; dy <= 3; dy++) {
-          const x = px + dx;
-          const y = py + dy;
-          const z = pz + dz;
-          const id = this.getBlock(x, y, z);
-          if (id === WHEAT_0 || id === WHEAT_1 || id === WHEAT_2) {
-            if (this.getBlock(x, y - 1, z) !== FARMLAND) continue;
-            if (Math.random() > 0.18) continue;
-            this.setBlock(x, y, z, id === WHEAT_0 ? WHEAT_1 : id === WHEAT_1 ? WHEAT_2 : WHEAT_3);
-          } else if (id === OAK_SAPLING && Math.random() < 0.06) {
-            this.growOakTree(x, y, z);
-          }
-        }
+    for (let i = 0; i < 56; i++) {
+      const x = px + ((Math.random() * 21) | 0) - 10;
+      const y = py + ((Math.random() * 7) | 0) - 3;
+      const z = pz + ((Math.random() * 21) | 0) - 10;
+      const id = this.getBlock(x, y, z);
+      if (id === WHEAT_0 || id === WHEAT_1 || id === WHEAT_2) {
+        if (this.getBlock(x, y - 1, z) !== FARMLAND) continue;
+        if (Math.random() > 0.28) continue;
+        this.setBlock(x, y, z, id === WHEAT_0 ? WHEAT_1 : id === WHEAT_1 ? WHEAT_2 : WHEAT_3);
+      } else if (id === OAK_SAPLING && Math.random() < 0.08) {
+        this.growOakTree(x, y, z);
       }
     }
   }

@@ -275,6 +275,9 @@ export class EntityWorld {
       const mz = e.mesh.position.z;
       const d2 = (mx - px) * (mx - px) + (mz - pz) * (mz - pz);
       const riding = e.type === "boat" && player.vehicleId === e.id;
+      if (d2 > 36 * 36 && e.type !== "ender_dragon" && e.type !== "end_crystal" && e.type !== "ghast") {
+        e.mesh.visible = d2 < 64 * 64;
+      } else if (e.mesh) e.mesh.visible = true;
       if (!riding && e.type !== "item" && e.type !== "arrow" && e.type !== "bobber" && e.type !== "fireball" && e.type !== "pearl" && e.type !== "xp" && e.type !== "eye") {
         if (d2 > 84 * 84 && e.type !== "ender_dragon" && e.type !== "end_crystal") {
           if (e.spawnKey || e.tamed || e.baby) {
@@ -363,7 +366,7 @@ export class EntityWorld {
         const hitPlayer = p.distanceTo(player.pos) < 1.35 && !player.dead;
         if (this.world.isSolid(p.x, p.y, p.z) || e.age > 6 || hitPlayer) {
           if (hitPlayer) {
-            player.hurt(e.from === "blaze" ? 4 : e.from === "dragon" ? 7 : 8, p);
+            player.hurt(e.from === "blaze" ? 4 : e.from === "dragon" ? 7 : 8, p, { fire: true });
             player.fireTicks = Math.max(player.fireTicks, 4);
             audio.hurt();
           }
@@ -730,6 +733,7 @@ export class EntityWorld {
       }
       if (e.type === "witch" && dist < 1.4 && e.cooldown <= 0 && !player.dead) {
         player.hurt(5, e.mesh.position);
+        player.addEffect("poison", 6);
         audio.hurt();
         this.alertPack(e);
         e.cooldown = 1.2;
@@ -968,7 +972,7 @@ export class EntityWorld {
       if (to.length() > reach) continue;
       if (to.normalize().dot(dir) > 0.72) {
         e.hp -= dmg;
-        this.knockback(e, origin, dir, 1);
+        this.knockback(e, origin, dir, dmg > 6 ? 1.35 : 1);
         this.alertPack(null, e);
         if (e.type === "enderman") {
           const a = Math.random() * Math.PI * 2;

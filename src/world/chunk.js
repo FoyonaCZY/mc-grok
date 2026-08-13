@@ -40,7 +40,7 @@ export class Chunk {
     this.modified = true;
   }
 
-  computeLight(world) {
+  computeLight(world, opts = {}) {
     this.light.fill(0);
     const q = [];
     for (let x = 0; x < SIZE; x++) {
@@ -59,6 +59,7 @@ export class Chunk {
         }
       }
     }
+    if (opts.fancyLight === false) return;
     if (world) {
       for (let y = 0; y < HEIGHT; y++) {
         for (let i = 0; i < SIZE; i++) {
@@ -127,8 +128,8 @@ export class Chunk {
     return world.getBlock(wx, y, wz);
   }
 
-  buildMesh(world, textures, opaqueMat, cutoutMat, transMat) {
-    this.computeLight(world);
+  buildMesh(world, textures, opaqueMat, cutoutMat, transMat, opts = {}) {
+    this.computeLight(world, opts);
     const opaque = emptyGeom();
     const cutout = emptyGeom();
     const trans = emptyGeom();
@@ -165,7 +166,7 @@ export class Chunk {
             const tileName = faceTile(block, face.name);
             const uv = textures.uv(TILE_SAFE(textures, tileName, block.key));
             const shade = faceShade(face.name);
-            const ao = vertexAO(this, world, x, y, z, face);
+            const ao = opts.ao === false ? NO_AO : vertexAO(this, world, x, y, z, face);
             pushFace(bucket, x, y, z, face, uv, shade, ao, (lx, ly, lz) => this.neighborLight(world, lx, ly, lz));
           }
         }
@@ -265,6 +266,8 @@ function pushDoorPanel(g, x, y, z, uv, light) {
     g.v += 4;
   }
 }
+
+const NO_AO = [1, 1, 1, 1];
 
 function emptyGeom() {
   return { pos: [], nrm: [], uv: [], col: [], idx: [], v: 0 };

@@ -7,6 +7,22 @@ export class Particles {
   constructor(scene) {
     this.scene = scene;
     this.items = [];
+    this.pool = [];
+    this.geo = new THREE.BoxGeometry(0.08, 0.08, 0.08);
+    this.max = 96;
+  }
+
+  alloc(color) {
+    let p = this.pool.pop();
+    if (!p) {
+      const mat = new THREE.MeshBasicMaterial({ color });
+      const mesh = new THREE.Mesh(this.geo, mat);
+      p = { mesh, vel: new THREE.Vector3(), life: 0 };
+    }
+    p.mesh.material.color.setHex(color);
+    p.mesh.visible = true;
+    this.scene.add(p.mesh);
+    return p;
   }
 
   burst(x, y, z, color, n = 12) {
@@ -14,15 +30,14 @@ export class Particles {
   }
 
   burstAt(x, y, z, color, n = 12) {
+    const room = this.max - this.items.length;
+    n = Math.min(n, Math.max(0, room));
     for (let i = 0; i < n; i++) {
-      const m = new THREE.Mesh(
-        new THREE.BoxGeometry(0.08, 0.08, 0.08),
-        new THREE.MeshLambertMaterial({ color }),
-      );
-      m.position.set(x, y, z);
-      const v = new THREE.Vector3((Math.random() - 0.5) * 3, Math.random() * 3 + 1, (Math.random() - 0.5) * 3);
-      this.scene.add(m);
-      this.items.push({ mesh: m, vel: v, life: 0.5 + Math.random() * 0.4 });
+      const p = this.alloc(color);
+      p.mesh.position.set(x, y, z);
+      p.vel.set((Math.random() - 0.5) * 3, Math.random() * 3 + 1, (Math.random() - 0.5) * 3);
+      p.life = 0.45 + Math.random() * 0.4;
+      this.items.push(p);
     }
   }
 
@@ -36,11 +51,21 @@ export class Particles {
       p.mesh.rotation.y += dt * 6;
       if (p.life <= 0) {
         this.scene.remove(p.mesh);
-        p.mesh.geometry.dispose();
-        p.mesh.material.dispose();
+        p.mesh.visible = false;
+        this.pool.push(p);
         this.items.splice(i, 1);
       }
     }
+  }
+
+  dispose() {
+    for (const p of [...this.items, ...this.pool]) {
+      this.scene.remove(p.mesh);
+      p.mesh.material.dispose();
+    }
+    this.items = [];
+    this.pool = [];
+    this.geo.dispose();
   }
 }
 
@@ -176,7 +201,7 @@ function likeTool(id) {
   const it = ITEMS[id];
   if (!it) return false;
   if (it.isTool || it.tool) return true;
-  return id === "bow" || id === "fishing_rod" || id === "stick" || id === "arrow" || id === "bone" || id === "shears";
+  return id === "bow" || id === "fishing_rod" || id === "stick" || id === "arrow" || id === "bone" || id === "shears" || id === "shield";
 }
 
 export function setHeldItem(hand, itemId) {
@@ -223,19 +248,20 @@ export function setHeldItem(hand, itemId) {
 export function updateHand(hand, player, swing, dt) {
   hand._idle += dt;
   const punch = Math.sin(Math.max(0, swing) * Math.PI);
+  const block = player.blocking ? 1 : 0;
   const spd = Math.hypot(player.vel.x, player.vel.z);
   const moving = player.onGround && !player.flying && spd > 0.03;
   const target = moving ? Math.min(16, 7 + spd * 80) : 0;
   hand._walkSpeed = (hand._walkSpeed ?? 0) + (target - (hand._walkSpeed ?? 0)) * Math.min(1, dt * 14);
   hand._walk = (hand._walk || 0) + dt * hand._walkSpeed;
-  const walkAmt = Math.min(1, (hand._walkSpeed || 0) / 8);
+  const walkAmt = Math.min(1, (hand._walkSpeed || 0) / 8) * (1 - block * 0.7);
   const bob = hand._walk;
-  hand.arm.rotation.x = 0.42 + Math.sin(bob) * 0.34 * walkAmt - punch * 1.45;
-  hand.arm.rotation.y = 0.12 + punch * 0.7;
-  hand.arm.rotation.z = -0.22 - Math.cos(bob) * 0.06 * walkAmt - punch * 0.18;
+  hand.arm.rotation.x = 0.42 + Math.sin(bob) * 0.34 * walkAmt - punch * 1.45 - block * 0.85;
+  hand.arm.rotation.y = 0.12 + punch * 0.7 + block * 0.55;
+  hand.arm.rotation.z = -0.22 - Math.cos(bob) * 0.06 * walkAmt - punch * 0.18 - block * 0.35;
   const idle = Math.sin(hand._idle * 1.8) * 0.012;
-  hand.position.x = Math.sin(bob) * 0.05 * walkAmt + punch * 0.07;
-  hand.position.y = -Math.abs(Math.sin(bob)) * 0.045 * walkAmt - punch * 0.16 + idle;
-  hand.position.z = -punch * 0.1;
+  hand.position.x = Math.sin(bob) * 0.05 * walkAmt + punch * 0.07 + block * 0.08;
+  hand.position.y = -Math.abs(Math.sin(bob)) * 0.045 * walkAmt - punch * 0.16 + idle + block * 0.12;
+  hand.position.z = -punch * 0.1 - block * 0.06;
   setHeldItem(hand, player.held()?.id);
 }

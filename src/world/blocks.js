@@ -280,6 +280,7 @@ function addItem(def) {
   ITEMS[def.id] = def;
   def.stack = def.stack ?? 64;
   def.category = def.category ?? "misc";
+  if (def.armor && !def.uses) def.uses = 80 + def.armor * 42;
   return def.id;
 }
 
@@ -331,7 +332,7 @@ addItem({ id: "carrot", name: { zh_cn: "胡萝卜", en_us: "Carrot" }, category:
 addItem({ id: "potato", name: { zh_cn: "马铃薯", en_us: "Potato" }, category: "food", food: 1, sat: 0.6 });
 addItem({ id: "baked_potato", name: { zh_cn: "烤马铃薯", en_us: "Baked Potato" }, category: "food", food: 5, sat: 6 });
 addItem({ id: "sugar", name: { zh_cn: "糖", en_us: "Sugar" }, category: "misc" });
-addItem({ id: "shears", name: { zh_cn: "剪刀", en_us: "Shears" }, stack: 1, category: "tools", tool: "shears" });
+addItem({ id: "shears", name: { zh_cn: "剪刀", en_us: "Shears" }, stack: 1, category: "tools", tool: "shears", uses: 238 });
 addItem({ id: "leather", name: { zh_cn: "皮革", en_us: "Leather" }, category: "misc" });
 addItem({ id: "paper", name: { zh_cn: "纸", en_us: "Paper" }, category: "misc" });
 addItem({ id: "book", name: { zh_cn: "书", en_us: "Book" }, category: "misc" });
@@ -350,13 +351,13 @@ addItem({ id: "white_dye", name: { zh_cn: "白色染料", en_us: "White Dye" }, 
 addItem({ id: "orange_dye", name: { zh_cn: "橙色染料", en_us: "Orange Dye" }, category: "misc" });
 addItem({ id: "pink_dye", name: { zh_cn: "粉红色染料", en_us: "Pink Dye" }, category: "misc" });
 addItem({ id: "brown_dye", name: { zh_cn: "棕色染料", en_us: "Brown Dye" }, category: "misc" });
-addItem({ id: "bow", name: { zh_cn: "弓", en_us: "Bow" }, stack: 1, category: "combat", damage: 6 });
+addItem({ id: "bow", name: { zh_cn: "弓", en_us: "Bow" }, stack: 1, category: "combat", damage: 6, uses: 384 });
 addItem({ id: "arrow", name: { zh_cn: "箭", en_us: "Arrow" }, category: "combat" });
-addItem({ id: "flint_and_steel", name: { zh_cn: "打火石", en_us: "Flint and Steel" }, stack: 1, category: "tools" });
+addItem({ id: "flint_and_steel", name: { zh_cn: "打火石", en_us: "Flint and Steel" }, stack: 1, category: "tools", uses: 64 });
 addItem({ id: "bucket", name: { zh_cn: "桶", en_us: "Bucket" }, stack: 16, category: "tools" });
 addItem({ id: "water_bucket", name: { zh_cn: "水桶", en_us: "Water Bucket" }, stack: 1, category: "tools" });
 addItem({ id: "lava_bucket", name: { zh_cn: "熔岩桶", en_us: "Lava Bucket" }, stack: 1, category: "tools" });
-addItem({ id: "fishing_rod", name: { zh_cn: "钓鱼竿", en_us: "Fishing Rod" }, stack: 1, category: "tools" });
+addItem({ id: "fishing_rod", name: { zh_cn: "钓鱼竿", en_us: "Fishing Rod" }, stack: 1, category: "tools", uses: 64 });
 addItem({ id: "compass", name: { zh_cn: "指南针", en_us: "Compass" }, stack: 1, category: "tools" });
 addItem({ id: "ender_pearl", name: { zh_cn: "末影珍珠", en_us: "Ender Pearl" }, category: "misc" });
 addItem({ id: "oak_boat", name: { zh_cn: "橡木船", en_us: "Oak Boat" }, stack: 1, category: "tools" });
@@ -375,6 +376,20 @@ addItem({ id: "magma_cream", name: { zh_cn: "岩浆膏", en_us: "Magma Cream" },
 addItem({ id: "gold_nugget", name: { zh_cn: "金粒", en_us: "Gold Nugget" }, category: "misc" });
 addItem({ id: "ender_eye", name: { zh_cn: "末影之眼", en_us: "Eye of Ender" }, category: "misc" });
 addItem({ id: "chorus_fruit", name: { zh_cn: "紫颂果", en_us: "Chorus Fruit" }, category: "food", food: 4, sat: 2.4 });
+addItem({
+  id: "shield",
+  name: { zh_cn: "盾牌", en_us: "Shield" },
+  stack: 1,
+  category: "combat",
+  uses: 336,
+});
+addItem({
+  id: "totem_of_undying",
+  name: { zh_cn: "不死图腾", en_us: "Totem of Undying" },
+  stack: 1,
+  category: "combat",
+  rare: true,
+});
 
 const TIERS = [
   { prefix: "wooden", zh: "木", en: "Wooden", speed: 2, harvest: 1, uses: 59, dmg: 4, mat: "planks" },

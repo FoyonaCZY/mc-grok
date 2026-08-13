@@ -95,15 +95,26 @@ export class UI {
         </div>
       </div>
       <div class="screen passthrough" id="sc-hud">
+        <div class="vignette hurt" id="fx-hurt"></div>
+        <div class="vignette water" id="fx-water"></div>
+        <div class="vignette lava" id="fx-lava"></div>
+        <div class="vignette portal" id="fx-portal"></div>
+        <div class="vignette fire" id="fx-fire"></div>
+        <div class="vignette totem" id="fx-totem"></div>
+        <div class="vignette sleep" id="fx-sleep"></div>
         <div class="boss-bar hidden" id="boss-bar">
           <div class="boss-name" id="boss-name"></div>
           <div class="boss-track"><div class="boss-fill" id="boss-fill"></div></div>
         </div>
         <img class="crosshair" />
+        <div class="attack-ind" id="attack-ind"><i></i></div>
         <div class="compass-hud hidden" id="compass-hud">
           <div class="compass-disk"></div>
           <div class="compass-needle" id="compass-needle"></div>
         </div>
+        <div class="clock-hud hidden" id="clock-hud"></div>
+        <div class="toast-stack" id="toast-stack"></div>
+        <div class="save-pip hidden" id="save-pip"></div>
         <div class="debug hidden" id="debug-l"></div>
         <div class="debug right hidden" id="debug-r"></div>
         <div class="chat-log" id="chat-log"></div>
@@ -147,6 +158,11 @@ export class UI {
         <div class="screen-title" data-i18n="multiplayerTitle"></div>
         <div class="server-list" id="server-list"></div>
         <div class="panel" id="mp-btns"></div>
+      </div>
+      <div class="screen dirt-bg" id="sc-adv">
+        <div class="screen-title" data-i18n="advancements"></div>
+        <div class="adv-list" id="adv-list"></div>
+        <div class="menu-stack" id="adv-btns"></div>
       </div>
       <div class="screen dirt-bg" id="sc-death">
         <div class="death-title" data-i18n="youDied"></div>
@@ -344,7 +360,7 @@ export class UI {
     const w = this.els["pause-btns"];
     w.innerHTML = "";
     w.append(this.btn("backToGame", "wide", () => this.emit("resume")));
-    w.append(this.btn("advancements", "wide", () => {}, true));
+    w.append(this.btn("advancements", "wide", () => this.emit("advancements")));
     w.append(this.btn("giveFeedback", "half", () => window.open("https://www.minecraft.net", "_blank")));
     const r = document.createElement("div");
     r.className = "menu-row";
@@ -393,6 +409,11 @@ export class UI {
       this.emit("settings", settings);
       this.refreshOptions(settings, back);
     }));
+    b.append(slider(this, `${this.tr("brightness")}: ${settings.brightness ?? 50}%`, 0, 100, settings.brightness ?? 50, (v) => {
+      settings.brightness = v;
+      this.emit("settings", settings);
+      this.refreshOptions(settings, back);
+    }));
     b.append(this.btnText(`${this.tr("invertMouse")}: ${settings.invertMouse ? this.tr("on") : this.tr("off")}`, "wide", () => {
       settings.invertMouse = !settings.invertMouse;
       this.emit("settings", settings);
@@ -415,6 +436,11 @@ export class UI {
     }));
     b.append(this.btnText(`${this.tr("autoJump")}: ${settings.autoJump ? this.tr("on") : this.tr("off")}`, "wide", () => {
       settings.autoJump = !settings.autoJump;
+      this.emit("settings", settings);
+      this.refreshOptions(settings, back);
+    }));
+    b.append(this.btnText(`${this.tr("keepInventory")}: ${settings.keepInventory ? this.tr("on") : this.tr("off")}`, "wide", () => {
+      settings.keepInventory = !settings.keepInventory;
       this.emit("settings", settings);
       this.refreshOptions(settings, back);
     }));
@@ -547,6 +573,20 @@ export class UI {
             c.textContent = it.count;
             el.append(c);
           }
+          const def = ITEMS[it.id];
+          if (def?.uses) {
+            const dur = it.dur ?? def.uses;
+            if (dur < def.uses) {
+              const bar = document.createElement("div");
+              bar.className = "dur-bar";
+              const fill = document.createElement("div");
+              const r = Math.max(0, dur / def.uses);
+              fill.style.width = `${r * 100}%`;
+              fill.style.background = r > 0.5 ? "#55ff55" : r > 0.2 ? "#ffff55" : "#ff5555";
+              bar.append(fill);
+              el.append(bar);
+            }
+          }
         }
       });
       const sel = this.els.hotbar.querySelector(".hotbar-sel") || this.root.querySelector("#hotbar-sel");
@@ -589,6 +629,86 @@ export class UI {
         needle.style.transform = `rotate(${ang}rad)`;
       }
     }
+    const clock = this.els["clock-hud"];
+    if (clock && player) {
+      const showClock = player.held()?.id === "clock";
+      clock.classList.toggle("hidden", !showClock);
+    }
+  }
+
+  setClockLabel(text) {
+    if (this.els["clock-hud"]) this.els["clock-hud"].textContent = text;
+  }
+
+  setAttack(t) {
+    const el = this.els["attack-ind"];
+    if (!el) return;
+    const p = Math.max(0, Math.min(1, t));
+    el.style.setProperty("--p", String(p));
+    el.classList.toggle("ready", p >= 0.999);
+    el.classList.toggle("hidden", p >= 0.999);
+  }
+
+  setOverlay(id, on, opacity = null) {
+    const el = this.els[id];
+    if (!el) return;
+    el.classList.toggle("on", !!on);
+    if (opacity != null) el.style.opacity = String(opacity);
+    else el.style.opacity = "";
+  }
+
+  toastAdv(title, desc) {
+    const stack = this.els["toast-stack"];
+    if (!stack) return;
+    const box = document.createElement("div");
+    box.className = "adv-toast";
+    box.innerHTML = `<div class="adv-kicker">${this.tr("advUnlocked")}</div><div class="adv-title"></div><div class="adv-desc"></div>`;
+    box.querySelector(".adv-title").textContent = title;
+    box.querySelector(".adv-desc").textContent = desc;
+    stack.append(box);
+    setTimeout(() => box.classList.add("out"), 4200);
+    setTimeout(() => box.remove(), 5000);
+  }
+
+  flashSave() {
+    const el = this.els["save-pip"];
+    if (!el) return;
+    el.textContent = this.tr("worldSaved");
+    el.classList.remove("hidden");
+    clearTimeout(this._saveHide);
+    this._saveHide = setTimeout(() => el.classList.add("hidden"), 1400);
+  }
+
+  refreshAdv(done) {
+    const list = this.els["adv-list"];
+    const btns = this.els["adv-btns"];
+    list.innerHTML = "";
+    btns.innerHTML = "";
+    const ids = [
+      ["story/mine_stone", "advStone", "advStoneDesc"],
+      ["story/getting_wood", "advWood", "advWoodDesc"],
+      ["story/iron_tools", "advIron", "advIronDesc"],
+      ["story/mine_diamond", "advDiamond", "advDiamondDesc"],
+      ["nether/root", "advNether", "advNetherDesc"],
+      ["end/root", "advEnd", "advEndDesc"],
+      ["end/kill_dragon", "advDragon", "advDragonDesc"],
+      ["adventure/sleep", "advSleep", "advSleepDesc"],
+      ["husbandry/eat", "advEat", "advEatDesc"],
+      ["adventure/kill", "advKill", "advKillDesc"],
+      ["adventure/totem", "advTotem", "advTotemDesc"],
+      ["adventure/shield", "advShield", "advShieldDesc"],
+    ];
+    for (const [id, title, desc] of ids) {
+      const row = document.createElement("div");
+      const on = !!(done && done[id]);
+      row.className = "adv-row" + (on ? " done" : "");
+      row.innerHTML = `<div class="adv-row-title"></div><div class="adv-row-desc"></div>`;
+      row.querySelector(".adv-row-title").textContent = (on ? "★ " : "☆ ") + this.tr(title);
+      row.querySelector(".adv-row-desc").textContent = this.tr(desc);
+      list.append(row);
+    }
+    btns.append(this.btn("done", "wide", () => this.emit("advBack")));
+    this.applyLang();
   }
 
   setBossBar(ratio, name) {

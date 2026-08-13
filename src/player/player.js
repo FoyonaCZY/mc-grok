@@ -6,6 +6,10 @@ const TICK = 1 / 20;
 const WIDTH = 0.6;
 const HEIGHT_STAND = 1.8;
 const HEIGHT_SNEAK = 1.5;
+const _fwd = new THREE.Vector3();
+const _right = new THREE.Vector3();
+const _camDir = new THREE.Vector3();
+const _camOrigin = new THREE.Vector3();
 
 export class Player {
   constructor(camera, world) {
@@ -67,6 +71,11 @@ export class Player {
     this.wishX = 0;
     this.wishZ = 0;
     this.tradingJob = "farmer";
+    this.effects = {};
+    this.absorption = 0;
+    this.attackCool = 1;
+    this.blocking = false;
+    this._totemFlash = 0;
   }
 
   eyeHeight() {
@@ -174,9 +183,10 @@ export class Player {
       this.acc -= TICK;
       stepped = this.physicsTick(input, settings) || stepped;
       if (this.invuln > 0) this.invuln -= TICK;
+      this.tickEffects(TICK);
       if (this.fireTicks > 0) {
         this.fireTicks -= TICK;
-        if (this.gamemode === "survival" && this.invuln <= 0) this.hurt(1);
+        if (this.gamemode === "survival" && this.invuln <= 0) this.hurt(1, null, { fire: true });
       }
     }
     this.applyCamera(settings);
@@ -205,8 +215,8 @@ export class Player {
     if (input.down("ControlLeft") || input.down("ControlRight")) this.sprinting = true;
     if (!wantForward || this.sneaking) this.sprinting = false;
 
-    const fwd = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
-    const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
+    const fwd = _fwd.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
+    const right = _right.set(-fwd.z, 0, fwd.x);
     let ix = 0, iz = 0;
     if (input.down("KeyW")) { ix += fwd.x; iz += fwd.z; }
     if (input.down("KeyS")) { ix -= fwd.x; iz -= fwd.z; }
@@ -234,6 +244,7 @@ export class Player {
     if (this.sprinting && this.onGround) speed = 0.13;
     if (this.flying) speed = this.sprinting ? 0.25 : 0.15;
     if (this.inFluid && !this.flying) speed *= 0.3;
+    if (this.effects.speed) speed *= 1.22;
     if (this.hunger <= 6 && this.sprinting) this.sprinting = false;
 
     if (this.flying) {
@@ -330,8 +341,10 @@ export class Player {
     } else this.fallStart = this.pos.y;
 
     if (this.inLava && this.gamemode === "survival") {
-      this.fireTicks = 4;
-      if (this.invuln <= 0) this.hurt(2);
+      if (!this.effects.fire_resist) {
+        this.fireTicks = 4;
+        if (this.invuln <= 0) this.hurt(2, null, { fire: true });
+      } else this.fireTicks = 0;
     }
 
     const below = BLOCKS[this.world.getBlock(this.pos.x, this.pos.y - 0.08, this.pos.z)];
@@ -343,7 +356,7 @@ export class Player {
       this._magmaAcc = (this._magmaAcc || 0) + TICK;
       if (this._magmaAcc > 0.5) {
         this._magmaAcc = 0;
-        this.hurt(1);
+        this.hurt(1, null, { fire: true });
         this.fireTicks = Math.max(this.fireTicks, 1.2);
       }
     } else this._magmaAcc = 0;
@@ -373,25 +386,28 @@ export class Player {
     let x = this.renderPos.x;
     let y = this.renderPos.y + eye;
     let z = this.renderPos.z;
-    if (settings.viewBobbing && this.onGround && !this.flying) {
+    if (settings.viewBobbing && this.onGround && !this.flying && this.perspective === 0) {
       y += Math.sin(this.renderBob * 2) * 0.04;
       x += Math.cos(this.renderBob) * 0.02;
     }
-    if (this.perspective === 1) {
-      const back = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw));
-      x += back.x * 4;
-      z += back.z * 4;
-      y += 1;
-    } else if (this.perspective === 2) {
-      const fwd = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
-      x += fwd.x * 4;
-      z += fwd.z * 4;
-      y += 1;
+    if (this.perspective === 1 || this.perspective === 2) {
+      const sign = this.perspective === 1 ? 1 : -1;
+      _camOrigin.set(this.renderPos.x, this.renderPos.y + eye, this.renderPos.z);
+      _camDir.set(Math.sin(this.yaw) * sign, 0.18, Math.cos(this.yaw) * sign).normalize();
+      const hit = voxelRaycast(this.world, _camOrigin, _camDir, 4.2);
+      let dist = 4;
+      if (hit && hit.t < dist) dist = Math.max(0.45, hit.t - 0.28);
+      x = _camOrigin.x + _camDir.x * dist;
+      y = _camOrigin.y + _camDir.y * dist + 0.35;
+      z = _camOrigin.z + _camDir.z * dist;
+    }
+    if (this.hurtYaw > 0) {
+      this.hurtYaw = Math.max(0, this.hurtYaw - 0.08);
     }
     this.camera.position.set(x, y, z);
     this.camera.up.set(0, 1, 0);
     this.camera.rotation.order = "YXZ";
-    this.camera.rotation.set(this.pitch, this.yaw, 0);
+    this.camera.rotation.set(this.pitch, this.yaw, this.hurtYaw * 0.08);
   }
 
   exhaust(n) {
@@ -425,12 +441,23 @@ export class Player {
     }
   }
 
-  hurt(n, src = null) {
+  hurt(n, src = null, opts = {}) {
     if (this.dead || this.gamemode === "creative") return;
     if (this.invuln > 0 && n < 50) return;
+    if (opts.fire && this.effects.fire_resist) return;
     let dmg = n;
+    if (this.blocking && n < 50) {
+      dmg *= 0.33;
+      this.wearShield(1);
+      this._blockedHit = true;
+    }
     const armor = this.armorPoints();
     dmg *= 1 - Math.min(20, armor) / 25;
+    if (this.absorption > 0) {
+      const a = Math.min(this.absorption, dmg);
+      this.absorption -= a;
+      dmg -= a;
+    }
     this.health = Math.max(0, this.health - dmg);
     this.invuln = 0.5;
     this.hurtYaw = 1;
@@ -443,9 +470,106 @@ export class Player {
       this.vel.y = Math.max(this.vel.y, 3.5);
     }
     if (this.health <= 0) {
+      if (this.tryTotem()) return;
       this.dead = true;
       this.vehicleId = 0;
     }
+  }
+
+  addEffect(id, seconds) {
+    this.effects[id] = Math.max(this.effects[id] || 0, seconds);
+    if (id === "absorption") this.absorption = Math.max(this.absorption, 4);
+  }
+
+  tickEffects(dt) {
+    this.attackCool = Math.min(1, this.attackCool + dt / this.attackInterval());
+    if (this._totemFlash > 0) this._totemFlash = Math.max(0, this._totemFlash - dt);
+    for (const k of Object.keys(this.effects)) {
+      this.effects[k] -= dt;
+      if (this.effects[k] <= 0) delete this.effects[k];
+    }
+    if (this.effects.regen && this.health < 20 && !this.dead) {
+      this._regenAcc = (this._regenAcc || 0) + dt;
+      if (this._regenAcc > 0.45) {
+        this._regenAcc = 0;
+        this.health = Math.min(20, this.health + 1);
+      }
+    }
+    if (this.effects.poison && this.health > 1 && !this.dead) {
+      this._poisonAcc = (this._poisonAcc || 0) + dt;
+      if (this._poisonAcc > 1.15) {
+        this._poisonAcc = 0;
+        this.health = Math.max(1, this.health - 1);
+        this.hurtYaw = 0.6;
+      }
+    }
+    if (!this.effects.absorption) this.absorption = Math.max(0, this.absorption - dt * 0.5);
+  }
+
+  attackInterval() {
+    const it = ITEMS[this.held()?.id];
+    if (it?.tool === "sword") return 0.62;
+    if (it?.tool === "axe") return 1.05;
+    if (it?.tool === "pickaxe" || it?.tool === "shovel" || it?.tool === "hoe") return 0.85;
+    if (it?.id === "trident") return 0.9;
+    return 0.25;
+  }
+
+  attackMul() {
+    const t = this.attackCool;
+    return t < 0.2 ? 0.2 : t * t;
+  }
+
+  wearHeld(n = 1) {
+    if (this.gamemode === "creative") return;
+    const h = this.held();
+    const it = h ? ITEMS[h.id] : null;
+    if (!it?.uses) return;
+    h.dur = (h.dur ?? it.uses) - n;
+    if (h.dur <= 0) this.hotbar[this.selected] = null;
+  }
+
+  wearShield(n = 1) {
+    if (this.gamemode === "creative") return;
+    const slots = [
+      ["hotbar", this.selected, this.held()],
+      ["offhand", 0, this.offhand],
+    ];
+    for (const [which, i, s] of slots) {
+      if (s?.id !== "shield") continue;
+      const it = ITEMS.shield;
+      s.dur = (s.dur ?? it.uses) - n;
+      if (s.dur <= 0) {
+        if (which === "hotbar") this.hotbar[i] = null;
+        else this.offhand = null;
+      }
+      return;
+    }
+  }
+
+  hasShield() {
+    return this.held()?.id === "shield" || this.offhand?.id === "shield";
+  }
+
+  tryTotem() {
+    const consume = (which, i) => {
+      const arr = which === "hotbar" ? this.hotbar : null;
+      if (which === "hotbar") arr[i] = null;
+      else this.offhand = null;
+      this.health = 1;
+      this.dead = false;
+      this.invuln = 1.4;
+      this.fireTicks = 0;
+      this.absorption = 2;
+      this.addEffect("regen", 8);
+      this.addEffect("fire_resist", 6);
+      this._totemFlash = 1.2;
+      this._totemUsed = true;
+      return true;
+    };
+    if (this.held()?.id === "totem_of_undying") return consume("hotbar", this.selected);
+    if (this.offhand?.id === "totem_of_undying") return consume("offhand", 0);
+    return false;
   }
 
   armorPoints() {
@@ -465,7 +589,13 @@ export class Player {
     if (this.hunger >= 20 && h.id !== "golden_apple" && !chorus) return false;
     this.hunger = Math.min(20, this.hunger + it.food);
     this.saturation = Math.min(this.hunger, this.saturation + (it.sat || 0));
-    if (h.id === "golden_apple") this.health = Math.min(20, this.health + 4);
+    if (h.id === "golden_apple") {
+      this.health = Math.min(20, this.health + 4);
+      this.addEffect("regen", 5);
+      this.addEffect("absorption", 12);
+    }
+    if (h.id === "golden_carrot") this.addEffect("night_vision", 20);
+    if (h.id === "chorus_fruit") this.addEffect("speed", 3);
     if (h.id === "mushroom_stew") this.give("bowl", 1);
     if (chorus) this.chorusTeleport();
     this.removeFromSlot("hotbar", this.selected, 1);
@@ -577,6 +707,8 @@ export class Player {
       spawn: [this.spawn.x, this.spawn.y, this.spawn.z],
       score: this.score,
       chests: [...this.chests.entries()].map(([k, v]) => [k, v.slots]),
+      effects: this.effects,
+      absorption: this.absorption,
     };
   }
 
@@ -602,6 +734,8 @@ export class Player {
     this.spawn.set(d.spawn[0], d.spawn[1], d.spawn[2]);
     this.score = d.score || 0;
     this.chests = new Map((d.chests || []).map(([k, slots]) => [k, { slots }]));
+    this.effects = d.effects || {};
+    this.absorption = d.absorption || 0;
     this.dead = this.health <= 0;
   }
 }

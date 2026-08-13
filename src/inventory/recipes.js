@@ -81,6 +81,7 @@ export const ALL_RECIPES = [
   { map: { "#": "stick" }, rows: ["# #", "###", "# #"], out: "ladder", count: 3 },
   { map: { s: "stick", P: "#planks" }, rows: ["sPs", "sPs"], out: "oak_fence", count: 3 },
   { map: { s: "stick", P: "#planks" }, rows: ["s s", "sPs", "sPs"], out: "oak_fence_gate", count: 1 },
+  { map: { P: "#planks", I: "iron_ingot" }, rows: ["PIP", "PPP", " P "], out: "shield", count: 1 },
   { map: { I: "iron_ingot", R: "redstone" }, rows: [" I ", "IRI", " I "], out: "compass", count: 1 },
   { map: { G: "gold_ingot", R: "redstone" }, rows: [" G ", "GRG", " G "], out: "clock", count: 1 },
   { map: { S: "sand", G: "gunpowder" }, rows: ["GSG", "SGS", "GSG"], out: "tnt", count: 1 },

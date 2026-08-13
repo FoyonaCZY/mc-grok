@@ -102,7 +102,7 @@ export class Sky {
     return pts;
   }
 
-  update(time, playerPos, fancyClouds, raining = false, snowing = false, nether = false, dt = 1 / 60, end = false) {
+  update(time, playerPos, fancyClouds, raining = false, snowing = false, nether = false, dt = 1 / 60, end = false, brightness = 50, nightVision = false) {
     if (end) {
       const sky = new THREE.Color(0x100018);
       this.sky.material.color.copy(sky);
@@ -119,6 +119,7 @@ export class Sky {
       this.clouds.visible = false;
       this.rain.visible = false;
       this.sky.position.copy(playerPos);
+      this.applyMood(brightness, nightVision);
       return;
     }
     if (nether) {
@@ -136,6 +137,7 @@ export class Sky {
       this.clouds.visible = false;
       this.rain.visible = false;
       this.sky.position.copy(playerPos);
+      this.applyMood(brightness, nightVision);
       return;
     }
     const t = ((time % 24000) + 24000) % 24000;
@@ -212,6 +214,18 @@ export class Sky {
       this.rain.geometry.attributes.position.needsUpdate = true;
     } else {
       this.rain.visible = false;
+    }
+    this.applyMood(brightness, nightVision);
+  }
+
+  applyMood(brightness = 50, nightVision = false) {
+    const b = 0.42 + (Math.max(0, Math.min(100, brightness)) / 100) * 1.05;
+    if (nightVision) {
+      this.hemi.intensity = Math.max(this.hemi.intensity * b, 1.15);
+      this.sunLight.intensity = Math.max(this.sunLight.intensity * b, 0.62);
+    } else {
+      this.hemi.intensity *= b;
+      this.sunLight.intensity *= b;
     }
   }
 }
