@@ -1,14 +1,16 @@
-# Minecrafts（mc-grok）
+# Minecrafts (mc-grok)
 
-**100% 由 Grok 4.6 编写的纯前端《Minecraft》复刻。**
+**English** | [中文](README.zh-CN.md)
 
-这是一个在浏览器里运行的体素沙盒：Vite + Three.js，程序生成像素贴图，**不含任何 Mojang / Microsoft 官方资源包、音效或代码**。不是官方产品，也与 Mojang 无关。
+**A 100% Grok 4.6–written, pure-frontend Minecraft recreation.**
+
+A voxel sandbox that runs in the browser: Vite + Three.js, procedurally painted pixel textures, **no Mojang / Microsoft assets, sounds, or code**. Unofficial fan project. Not affiliated with Mojang.
 
 ---
 
-## 本地启动
+## Run locally
 
-需要已安装 [Node.js](https://nodejs.org/)（建议 18 或以上）和 npm。
+You need [Node.js](https://nodejs.org/) (18+ recommended) and npm.
 
 ```bash
 git clone https://github.com/FoyonaCZY/mc-grok.git
@@ -17,202 +19,202 @@ npm install
 npm run dev
 ```
 
-终端里会出现本地地址，默认是：
+Vite prints a local URL. The default is:
 
 ```
 http://127.0.0.1:5173/
 ```
 
-用浏览器打开即可。第一次进游戏要点一下画面：会请求全屏和鼠标锁定。
+Open it in a browser. The first click requests fullscreen and pointer lock.
 
-其它命令：
+Other commands:
 
 ```bash
-npm run build      # 打包到 dist/
-npm run preview    # 预览打包结果
+npm run build      # bundle into dist/
+npm run preview    # preview the production build
 ```
 
-存档在当前浏览器的 `localStorage`，不上传服务器。换设备、清站点数据会丢档。
+Saves live in this browser’s `localStorage`. They are not uploaded. Changing device or clearing site data wipes them.
 
 ---
 
-## 这是什么
+## What this is
 
-- 语言：JavaScript（ES modules）
-- 渲染：Three.js 区块网格 + 昼夜天空 / 雾 / 粒子
-- 贴图：运行时画布绘制的 16×16 像素图集，无外部材质
-- 世界：种子噪声地形，16×96×16 区块，主世界 / 下界 / 末地三维度
-- 作者声明：**全部玩法与代码由 Grok 4.6 在 Cursor 里写成**
+- Language: JavaScript (ES modules)
+- Rendering: Three.js chunk meshes, day/night sky, fog, particles
+- Textures: 16×16 pixel atlas drawn at runtime, no external packs
+- World: seeded noise terrain, 16×96×16 chunks, Overworld / Nether / The End
+- Authorship: **all gameplay and code were written by Grok 4.6 in Cursor**
 
-简化之处是刻意的：没有红石电路、没有附魔、没有鞘翅 / 末地船，龙战是可玩的简化版。目标是「能探索、能合成、能下矿、能打龙」，而不是 1:1 原版。
+The simplifications are intentional: no redstone circuitry, enchanting, or elytra / end ships. The dragon fight is a playable reduced version. The goal is explore, craft, mine, and kill the dragon — not a 1:1 vanilla clone.
 
 ---
 
-## 维度与地形
+## Dimensions and terrain
 
-| 维度 | 说明 |
+| Dimension | Notes |
 | --- | --- |
-| 主世界 | 海平面约 y=42，世界高度 96。洞穴、峡谷、矿脉、河流上岸。天气：晴 / 雨，寒冷群系下雪粒子 |
-| 下界 | 基岩顶底、岩浆海、菌岩与要塞。无日夜、无雨。水会蒸发。床会爆炸 |
-| 末地 | 虚空 + 末地石主岛（原点附近）与外围小岛、紫颂植株、黑曜石柱与末影水晶。无日夜、无雨。床会爆炸 |
+| Overworld | Sea level ~y=42, world height 96. Caves, ravines, ores, river banks. Weather: clear / rain; snow particles in cold biomes |
+| Nether | Bedrock ceiling and floor, lava seas, nylium, fortresses. No day/night, no rain. Water evaporates. Beds explode |
+| The End | Void + end-stone main island (near origin), outer islets, chorus plants, obsidian pillars and crystals. No day/night, no rain. Beds explode |
 
-世界类型：`default`（默认）、`superflat`（超平坦）、`largeBiomes`（大型生物群系）。
+World types: `default`, `superflat`, `largeBiomes`.
 
-可选奖励箱。种子决定地形与结构位置。
+Optional bonus chest. The seed drives terrain and structure placement.
 
-### 主世界生物群系（18）
+### Overworld biomes (18)
 
-海洋、暖水海洋、冻洋、海滩、平原、森林、白桦林、繁花森林、针叶林、丛林、沼泽、沙漠、热带草原、恶地、蘑菇岛、雪山、雪原、山地。
+Ocean, warm ocean, frozen ocean, beach, plains, forest, birch forest, flower forest, taiga, jungle, swamp, desert, savanna, badlands, mushroom fields, snowy peaks, snowy plains, mountains.
 
-### 下界生物群系（5）
+### Nether biomes (5)
 
-下界荒地、灵魂沙峡谷、绯红森林、诡异森林、玄武岩三角洲。
+Nether wastes, soul sand valley, crimson forest, warped forest, basalt deltas.
 
-### 末地
+### The End
 
-单一末地风格：主岛半径约 90 格，外围噪声小岛。
+A single End-style biome: main island radius ~90 blocks, noisy outer islets.
 
-### 地下与地表特征
+### Underground and surface features
 
-- 洞穴、峡谷
-- 矿脉：煤、铁、铜、金、红石、青金石、钻石、绿宝石（山地）
-- 安山岩 / 闪长岩 / 花岗岩团块
-- 洞穴岩浆与水
-- 树：橡树、白桦、云杉、丛林
-- 花、草、仙人掌、甘蔗、蘑菇、南瓜、西瓜、粘土
-- 冰山 / 暖水海洋的海晶石柱（简化）
+- Caves, ravines
+- Ore veins: coal, iron, copper, gold, redstone, lapis, diamond, emerald (mountains)
+- Andesite / diorite / granite blobs
+- Cave lava and water
+- Trees: oak, birch, spruce, jungle
+- Flowers, grass, cactus, sugar cane, mushrooms, pumpkins, melons, clay
+- Icebergs / simplified prismarine columns in warm oceans
 
 ---
 
-## 结构
+## Structures
 
-结构只在**尚未生成过的区块**里刷。已经走过的旧档区块不会补刷。
+Structures generate only in **chunks that have never been created**. Already-explored save chunks are not backfilled.
 
-| 结构 | 维度 | 备注 |
+| Structure | Dimension | Notes |
 | --- | --- | --- |
-| 村庄 | 主世界 | 井、农田、房屋、铁匠、村民、铁傀儡。`/locate village` |
-| 要塞 | 主世界（地下） | 石砖走廊 + 末地门框架房间 + 箱子。`/locate stronghold` |
-| 废弃传送门 | 主世界 | 残缺黑曜石门 + 箱子 |
-| 地牢 | 主世界 | 刷怪笼风格房间 + 箱子 |
-| 废弃矿井 | 主世界 | 木支撑走廊 + 箱子 |
-| 沉船 | 海洋 | 木船残骸 + 箱子 |
-| 林中小屋 | 主世界 | 小型小屋 + 箱子 |
-| 下界要塞 | 下界 | 下界砖走廊、烈焰人、下界疣、箱子 |
-| 黑曜石柱 | 末地 | 柱顶末影水晶（龙死后不再刷新的） |
-| 返回门 / 龙蛋 | 末地 | 击杀末影龙后在中央生成 |
+| Village | Overworld | Well, farms, houses, smith, villagers, iron golem. `/locate village` |
+| Stronghold | Overworld (underground) | Stone-brick halls + end-portal-frame room + chest. `/locate stronghold` |
+| Ruined portal | Overworld | Broken obsidian frame + chest |
+| Dungeon | Overworld | Spawner-style room + chest |
+| Mineshaft | Overworld | Timbered corridors + chest |
+| Shipwreck | Ocean | Wooden wreck + chest |
+| Hut | Overworld | Small cabin + chest |
+| Nether fortress | Nether | Nether-brick halls, blazes, nether wart, chest |
+| Obsidian pillars | The End | End crystals on top (not respawned after the dragon dies) |
+| Exit portal / dragon egg | The End | Spawned at the center after the dragon is killed |
 
-箱子战利品按结构种类分池（村庄、铁匠、地牢、矿井、沉船、要塞、下界要塞、废弃传送门等）。
-
----
-
-## 方块
-
-程序贴图。隐藏状态方块（开门、带眼框架、作物阶段等）不进创造栏。
-
-**自然 / 建筑：** 石头、圆石、苔石、石砖、安山岩、闪长岩、花岗岩、基岩、泥土、草方块、耕地、灰化土、菌丝、沙子、砂砾、砂岩、粘土、陶瓦（含红/橙/黄）、雪块、冰、浮冰、海晶石、玻璃、砖块、黑曜石。
-
-**木：** 橡 / 白桦 / 云杉 / 丛林的原木、木板、树叶；橡木门、梯子、栅栏、栅栏门（可开关）；工作台、箱子、书架、音符盒、干草块。
-
-**矿与块：** 煤/铁/金/钻石/红石/青金石/绿宝石/铜矿石及对应矿物块。
-
-**下界：** 下界岩、灵魂沙、岩浆块、黑石、下界砖、下界石英矿、荧石、绯红/诡异菌岩与菌柄、下界疣及疣块、下界门。
-
-**末地：** 末地石、末地传送门框架（空/有眼）、末地门、紫颂植株/花、紫珀块、末地烛、龙蛋。
-
-**植物与功能：** 火把、仙人掌、甘蔗、小麦（4 阶段）、树苗、短草、蒲公英、虞美人、红棕蘑菇、南瓜、南瓜灯、西瓜、蜘蛛网、床、TNT、海绵、羊毛（白及染色）。
-
-流体：水、岩浆。沙子 / 砂砾 / 火把有重力。
+Chest loot is pooled by structure type (village, smith, dungeon, mineshaft, shipwreck, stronghold, fortress, ruined portal, …).
 
 ---
 
-## 物品
+## Blocks
 
-**工具（木/石/铁/金/钻石）：** 镐、斧、锹、锄、剑。另有剪刀、打火石、桶（水/熔岩）、钓鱼竿、指南针、时钟、船。
+Procedural textures. Hidden state blocks (open doors, eyed frames, crop stages, …) stay out of the creative tabs.
 
-**防具：** 皮革 / 铁 / 钻石 的盔、甲、腿、靴。
+**Nature / building:** stone, cobblestone, mossy cobblestone, stone bricks, andesite, diorite, granite, bedrock, dirt, grass, farmland, podzol, mycelium, sand, gravel, sandstone, clay, terracotta (incl. red/orange/yellow), snow, ice, packed ice, prismarine, glass, bricks, obsidian.
 
-**食物：** 苹果、金苹果、面包、各类生熟肉、胡萝卜、金胡萝卜、马铃薯、烤薯、甜浆类曲奇/南瓜派、蘑菇煲、鱼（鳕/鲑及熟制）、紫颂果（吃了会随机传送）。
+**Wood:** oak / birch / spruce / jungle logs, planks, leaves; oak door, ladder, fence, fence gate (toggle); crafting table, chest, bookshelf, note block, hay bale.
 
-**材料：** 棍、煤/木炭、各锭、宝石、红石、粘土球、红砖、燧石、线、骨头/骨粉、羽毛、皮革、纸、书、碗、火药、染料、下界石英/砖、烈焰棒/粉、恶魂之泪、岩浆膏、金粒、末影珍珠、末影之眼、小麦/种子等。
+**Ores and storage blocks:** coal, iron, gold, diamond, redstone, lapis, emerald, copper ores and their compact blocks.
 
-**战斗：** 弓、箭。
+**Nether:** netherrack, soul sand, magma, blackstone, nether bricks, nether quartz ore, glowstone, crimson/warped nylium and stems, nether wart and wart blocks, nether portal.
 
----
+**End:** end stone, end portal frames (empty / with eye), end portal, chorus plant/flower, purpur, end rod, dragon egg.
 
-## 生物
+**Plants and utility:** torch, cactus, sugar cane, wheat (4 stages), sapling, short grass, dandelion, poppy, red/brown mushrooms, pumpkin, jack o’lantern, melon, cobweb, bed, TNT, sponge, wool (white and dyed).
 
-### 被动 / 中立
-
-猪、牛、羊（可剪毛、染色羊毛）、鸡（下蛋）、蘑菇牛、马、兔子、鹦鹉、鱿鱼、狼（骨头驯服，坐下/跟随，喂肉繁殖，会帮你打怪）、村民（农民 / 铁匠 / 牧师，可交易）、铁傀儡（4 铁块 T 字 + 南瓜/南瓜灯，或村庄生成）。
-
-可繁殖：猪（胡萝卜/马铃薯）、牛/蘑菇牛/羊（小麦）、鸡（种子）、兔（胡萝卜/金胡萝卜）、马（金胡萝卜/苹果/小麦）、狼（肉）。爱心粒子，幼崽约 80 秒长大。
-
-### 敌对（主世界）
-
-僵尸、尸壳、溺尸、骷髅、流浪者、蜘蛛、苦力怕、女巫、末影人。白天部分亡灵会燃烧。和平难度不刷敌对。
-
-北极熊在冻洋 / 雪原出现。
-
-### 下界
-
-恶魂（火球）、烈焰人、猪灵、僵尸猪灵（被打会群攻）、岩浆怪、凋灵骷髅、末影人（诡异森林）。
-
-### 末地
-
-末影人、末影龙（绕岛飞行、喷火球、水晶回血）、末影水晶。
-
-击杀掉落经验球。近战有击退。玩家被打也会小幅击退。
+Fluids: water, lava. Sand / gravel / torches have gravity.
 
 ---
 
-## 玩法系统
+## Items
 
-- 模式：生存 / 创造 / 冒险；难度：和平 / 简单 / 普通 / 困难
-- 生命、饥饿、护甲、经验条；生存死亡掉落物品
-- 2×2 / 3×3 合成（工作台）、熔炉烧炼、箱子、创造物品栏
-- 种田（锄地、小麦、骨粉催熟、树苗长大）
-- 睡觉（夜间或雷雨；附近有怪不行；下界/末地床爆炸并设置重生点于主世界床）
-- 钓鱼、乘船、末影珍珠传送
-- 村民交易
-- 打火石点亮黑曜石下界门；站在门里约 3 秒切换维度
-- 末影之眼：烈焰粉 + 末影珍珠合成；扔出飞向最近要塞；右键填入框架，12 眼点亮末地门
-- 末影龙：打水晶再打龙；死后中央返回门 + 龙蛋；站上返回门约 3 秒回主世界出生点；末地/下界死亡也会回主世界
-- 铁傀儡建造、狼驯养、栅栏门开关
-- 指南针 HUD、F3 风格调试信息、中英界面
-- 昼夜循环、雨雪、音效（程序合成，非原版采样）
+**Tools (wood / stone / iron / gold / diamond):** pickaxe, axe, shovel, hoe, sword. Also shears, flint and steel, buckets (water / lava), fishing rod, compass, clock, boat.
+
+**Armor:** leather / iron / diamond helmet, chestplate, leggings, boots.
+
+**Food:** apple, golden apple, bread, raw and cooked meats, carrot, golden carrot, potato, baked potato, cookie, pumpkin pie, mushroom stew, cod/salmon (raw and cooked), chorus fruit (random teleport).
+
+**Materials:** stick, coal/charcoal, ingots, gems, redstone, clay ball, brick, flint, string, bone/bone meal, feather, leather, paper, book, bowl, gunpowder, dyes, nether quartz/brick, blaze rod/powder, ghast tear, magma cream, gold nugget, ender pearl, eye of ender, wheat/seeds, and more.
+
+**Combat:** bow, arrows.
 
 ---
 
-## 操作
+## Mobs
 
-| 按键 | 作用 |
+### Passive / neutral
+
+Pig, cow, sheep (shearable, dyeable wool), chicken (lays eggs), mooshroom, horse, rabbit, parrot, squid, wolf (tame with bones, sit/follow, breed with meat, fights for you), villager (farmer / smith / cleric, tradable), iron golem (T of 4 iron blocks + pumpkin / jack o’lantern, or village spawn).
+
+Breeding: pig (carrot/potato), cow/mooshroom/sheep (wheat), chicken (seeds), rabbit (carrot/golden carrot), horse (golden carrot/apple/wheat), wolf (meat). Heart particles; babies grow in ~80s.
+
+### Hostile (Overworld)
+
+Zombie, husk, drowned, skeleton, stray, spider, creeper, witch, enderman. Some undead burn in daylight. Peaceful does not spawn hostiles.
+
+Polar bears appear in frozen ocean / snowy plains.
+
+### Nether
+
+Ghast (fireballs), blaze, piglin, zombified piglin (pack agro), magma cube, wither skeleton, enderman (warped forest).
+
+### The End
+
+Enderman, Ender Dragon (orbits the island, fireballs, heals from crystals), end crystal.
+
+Kills drop XP orbs. Melee has knockback. The player is knocked back slightly when hit.
+
+---
+
+## Gameplay
+
+- Modes: survival / creative / adventure; difficulty: peaceful / easy / normal / hard
+- Health, hunger, armor, XP bar; survival deaths drop items
+- 2×2 / 3×3 crafting (table), furnace smelting, chests, creative inventory
+- Farming (hoe, wheat, bone meal, saplings grow)
+- Sleep (night or thunderstorm; not with monsters nearby; beds explode in the Nether/End; respawn is set on an Overworld bed)
+- Fishing, boats, ender-pearl teleport
+- Villager trading
+- Flint and steel lights an obsidian Nether portal; stand in it ~3s to change dimension
+- Eyes of Ender: blaze powder + ender pearl; throw toward the nearest stronghold; right-click empty frames; 12 eyes light the End portal
+- Ender Dragon: break crystals, then the dragon; exit portal + dragon egg at the center; stand on the exit ~3s to return to the Overworld spawn; dying in the End/Nether also returns to the Overworld
+- Iron golem construction, wolf taming, fence-gate toggle
+- Compass HUD, F3-style debug, Chinese/English UI
+- Day/night, rain/snow, procedural audio (not vanilla samples)
+
+---
+
+## Controls
+
+| Key | Action |
 | --- | --- |
-| W A S D | 移动 |
-| 空格 | 跳跃（创造可飞） |
-| 潜行 | 边缘防掉 / 下船 |
-| Ctrl+W | 冲刺；进游戏后会全屏并尝试 Keyboard Lock，避免关掉标签页 |
-| 鼠标左/右 | 破坏 / 使用、放置 |
-| 滚轮 / 1–9 | 快捷栏 |
-| E | 物品栏 |
-| Q | 丢弃 |
-| T / 回车 | 聊天与命令 |
-| F5 | 人称切换 |
-| Esc | 暂停 |
+| W A S D | Move |
+| Space | Jump (fly in creative) |
+| Sneak | Keep from falling off edges / leave boat |
+| Ctrl+W | Sprint; entering the game goes fullscreen and tries Keyboard Lock so the tab is not closed |
+| Left / right mouse | Break / use, place |
+| Wheel / 1–9 | Hotbar |
+| E | Inventory |
+| Q | Drop |
+| T / Enter | Chat and commands |
+| F5 | Perspective |
+| Esc | Pause |
 
 ---
 
-## 命令
+## Commands
 
-聊天里以 `/` 开头。`/time`、`/seed`、`/help`、`/locate`、`/dim` **不用开作弊**。其余需要创建世界时勾选作弊，或使用创造模式。
+Prefix with `/` in chat. `/time`, `/seed`, `/help`, `/locate`, `/dim` **do not need cheats**. The rest require Allow Cheats on world create, or Creative mode.
 
 ```
 /gamemode survival|creative|adventure
-/give <物品id> [数量]
-/time set day|noon|night|midnight|<数字>
+/give <item_id> [count]
+/time set day|noon|night|midnight|<number>
 /tp <x> <y> <z>
 /seed
 /weather clear|rain
-/summon <生物类型>
+/summon <mob_type>
 /kill
 /difficulty peaceful|easy|normal|hard
 /dim nether|end|overworld
@@ -221,26 +223,26 @@ npm run preview    # 预览打包结果
 /help
 ```
 
-`/locate` 给出的是生成算法坐标：只有走进**还没生成过的区块**才会真正出现村庄或要塞。
+`/locate` reports generator coordinates: the village or stronghold only appears after you walk into **unexplored chunks**.
 
 ---
 
-## 技术要点
+## Technical notes
 
-- 区块：`Uint8Array` 方块 ID（不超过 255）+ 简单光照扩散
-- 玩家相机：`PerspectiveCamera`，`rotation.order = "YXZ"`，用 pitch/yaw 设置，不用 `lookAt` 打玩家相机
-- 存档键：`minecrafts.worlds.v1`、`minecrafts.settings.v1`
-- 三维度各自保存方块补丁（`patches` / `netherPatches` / `endPatches`）
-- 静态部署：任意 nginx / GitHub Pages / 本地 `vite preview`
-
----
-
-## 明确没做的
-
-附魔、酿造、完整红石、活塞、下界合金、潜影贝、鞘翅、末地船/外岛城、凋灵 Boss、数据包、多人联机同步、云存档。
+- Chunks: `Uint8Array` block IDs (max 255) + simple light flood
+- Player camera: `PerspectiveCamera`, `rotation.order = "YXZ"`, pitch/yaw; do not `lookAt` the player camera
+- Save keys: `minecrafts.worlds.v1`, `minecrafts.settings.v1`
+- Per-dimension block patches (`patches` / `netherPatches` / `endPatches`)
+- Static hosting: nginx, GitHub Pages, or local `vite preview`
 
 ---
 
-## 许可与声明
+## Explicitly not implemented
 
-源码可按仓库许可使用。**Minecraft 是 Mojang / Microsoft 的商标。** 本项目是粉丝向的独立复刻，不使用官方材质、皮肤、声音或客户端。请不要把它描述成正版 Minecraft。
+Enchanting, brewing, full redstone, pistons, netherite, shulkers, elytra, end ships / outer end cities, Wither boss, datapacks, multiplayer sync, cloud saves.
+
+---
+
+## License and disclaimer
+
+Use the source as allowed by this repository. **Minecraft is a trademark of Mojang / Microsoft.** This is an independent fan recreation. It does not use official textures, skins, sounds, or the official client. Do not describe it as vanilla Minecraft.
